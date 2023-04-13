@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>政治默写生成</title>
+    <style>
+        body {
+            text-align: center;
+        }
+        #number {
+            width: 30px;
+        }
+        #number {
+            width: 30px;
+        }
+        #zztext {
+            display: inline-block;
+            width: calc(100% - 100px);
+            border: solid;
+            padding: 8px;
+            text-align: left;
+            min-height: 400px;
+        }
+        #zztext h1 {
+            margin: 0;
+        }
+		.bottom {
+			display: block;
+		}
+    </style>
+</head>
+<body>
+    <h3>政治默写</h3>
+    <div id="header">
+        <span>预设：</span>
+        <button onclick="setnumber('1')">1</button>
+        <button onclick="setnumber('5')">5</button>
+        <button onclick="setnumber('10')">10</button>
+        <button onclick="setnumber('15')">15</button>
+        <button onclick="setnumber('20')">20</button>
+        <button onclick="setnumber('50')">50</button>
+        <button onclick="setnumber('all')">all</button>
+        </br>
+        <span>生成数量 (all-全部)：</span>
+        <input type="text" id="number">
+        <button onclick="generate()">生成！</button>
+    </div>
+    <div id="info"></div>
+    </br>
+    <div id="zztext">
+    </div>
+    </br>
+    </br>
+	<span id="server" class="bottom"></span>
+	<span id="made" class="bottom">Made by htfc786</span>
+
+    <script>
+        var APIURL = "https://axskyv.laf.run/zzapi?action=generate" 
+		
+		
+        document.getElementById("server").innerHTML = "API："+APIURL;
+        function setnumber(number){
+            document.getElementById("number").value = number;
+            generate();
+        }
+        function generate(){
+            //禁用所有dom
+            /* document.getElementById("number").disabled = true;
+            var headerDom = document.getElementById("header");
+            var headerBotton = headerDom.getElementsByTagName("button")
+            for (var i=0;i<headerBotton.length;i++){
+                headerBotton[i].disabled = true
+            }*/
+            var info = document.getElementById("info")
+            var zztext = document.getElementById("zztext")
+            //获取值
+            var number = document.getElementById("number").value;
+            //请求
+            info.innerHTML = "正在请求API，请稍后。。。"
+            var xhr = new XMLHttpRequest();
+            var apiurl = APIURL+"&num="+number;
+            xhr.open("get", apiurl, true);
+            // 请求成功
+            xhr.onload = function (e) {
+				//获取转换数据
+                try {var data = JSON.parse(e.currentTarget.responseText)["data"];}
+                catch(err) {var ert=e.currentTarget.responseText;info.innerHTML="发生错误，服务器返回："+ert;return;}
+				
+				info.innerHTML = "生成成功，已生成"+data.num+"条数据"
+                //展示数据
+				zztext.innerHTML = "";
+				var tidata_all = data.tidata;
+                for (var i=0;i<tidata_all.length;i++){
+                    var tidata = tidata_all[i];
+					var index = i+1
+                    zztext.innerHTML+="<h1>"+index+". "+ tidata +"</h1>";
+                }
+                
+            }
+            // 请求失败
+            xhr.onerror = function (e) {
+                info.innerHTML = "网络出现问题，请求失败：" + e;
+                alert("网络出现问题，请求失败。。。");
+            }
+            xhr.send();
+        }
+		
+    </script>
+</body>
+</html>
