@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>政治抽提系统题目管理系统</title>
+
+    <link rel="stylesheet" href="./admin.css" />
+    <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css" />
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://unpkg.com/element-plus"></script>
+    
+    <script>
+        axios.defaults.baseURL = 'https://axskyv.laf.run/zzapi';
+    </script>
+</head>
+<body>
+    <div id="app">
+        <el-container>
+            <el-header>
+                <h1>欢迎使用政治抽提系统题目管理系统</h1>
+            </el-header>
+            <el-main>
+                <div class="tools-bar">
+                    <el-button type="primary" @click="addTi_open()">添加题目</el-button>
+                </div>
+                <div class="container">
+                    <!--面板的情景样式-->
+                    <div class="panel">
+                        <!--暂无数据-->
+                        <div class="panel-heading" v-if="!tiData.length"> 
+                            <h3 class="panel-title">暂无数据</h3>
+                        </div>
+                        <!--面板的主体-->
+                        <!--在面板中嵌入一个表格-->
+                        <table class="table" v-if="tiData.length">
+                            <thead>
+                                <tr class="bg-success">
+                                    <td style="width: 10px;">#</td>
+                                    <td>题目</td>
+                                    <td>操作</td>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="(item, index) in tiData">
+                                    <td>{{ index + 1 }}</td>
+                                    <td class="ticlass">{{ item.ti }}</td>
+                                    <td>
+                                        <a @click="editTi_open(item.id,item.ti)">编辑</a> |
+                                        <a @click="delTi(item.id,item.ti)">删除</a>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </el-main>
+        </el-container>
+        
+        <el-dialog v-model="editData.show" title="编辑题目">
+            <el-form :model="form">
+                <el-form-item label="题目">
+                    <el-input
+                        v-model="editData.ti"
+                        autosize
+                        type="textarea"
+                        placeholder="请输入题目"
+                    ></el-input>
+                </el-form-item>
+            </el-form>
+            <template #footer>
+                <span class="dialog-footer">
+                    <el-button @click="editData.show = false">关闭</el-button>
+                    <el-button type="primary" @click="editTi_close()">完成</el-button>
+                </span>
+            </template>
+        </el-dialog>
+
+        <el-dialog v-model="addData.show" title="添加题目">
+            <el-form :model="form">
+                <el-form-item label="题目">
+                    <el-input
+                        v-model="addData.ti"
+                        autosize
+                        type="textarea"
+                        placeholder="请输入题目"
+                    ></el-input>
+                </el-form-item>
+            </el-form>
+            <template #footer>
+                <span class="dialog-footer">
+                    <el-button @click="addData.show = false">关闭</el-button>
+                    <el-button type="primary" @click="addTi_close()">完成</el-button>
+                </span>
+            </template>
+        </el-dialog>
+    </div>
+    <script>
+        var API = {
+            get: function(){
+                return axios.request({
+                    url: "/",
+                    method: 'get',
+                    params: {
+                        action: "admin.get",
+                    },
+                })
+            },
+            remove: function(tiid){
+                return axios.request({
+                    url: "/",
+                    method: 'post',
+                    params: {
+                        action: "admin.remove",
+                    },
+                    data:{
+                        id: tiid,
+                    },
+                })
+            },
+            edit: function(tiid,ti){
+                return axios.request({
+                    url: "/",
+                    method: 'post',
+                    params: {
+                        action: "admin.edit",
+                    },
+                    data:{
+                        id: tiid,
+                        ti: ti,
+                    },
+                })
+            },
+            add: function(ti){
+                return axios.request({
+                    url: "/",
+                    method: 'post',
+                    params: {
+                        action: "admin.add",
+                    },
+                    data:{
+                        ti: ti,
+                    },
+                })
+            },
+        }
+        Vue.createApp({
+            data() {
+                return {
+                    tiData: [],
+                    editData: {
+                        show: false,
+                        tiid: "",
+                        ti: "",
+                    },
+                    addData: {
+                        show: false,
+                        ti: "",
+                    },
+                }
+            },
+            mounted: function () {
+                
+                this.getTi()
+            },
+            methods: {
+                getTi: function(){
+                    const that = this
+                    API.get().then(e=>{
+                        that.tiData = e.data.data;
+                    })
+                },
+                delTi: function(tiid,ti){
+                    const that = this
+                    this.$messageBox.confirm(
+                        '确定要删除“'+ti+'”吗？',
+                        '删除操作',
+                        {
+                            confirmButtonText: '删除',
+                            cancelButtonText: '取消',
+                            type: 'warning',
+                        }
+                    )
+                        .then(() => {
+                            API.remove(tiid)
+                            .then(e=>{
+                                that.$message.success('删除成功！');
+                                this.getTi()
+                            })
+                        })
+                    
+                },
+                editTi_open: function(tiid,ti){
+                    this.editData.tiid = tiid;
+                    this.editData.ti = ti;
+                    this.editData.show = true;
+                },
+                editTi_close: function(){
+                    this.editData.show = false;
+                    const that = this;
+                    API.edit(this.editData.tiid, this.editData.ti)
+                        .then(()=>{
+                            that.$message.success('修改成功！');
+                            that.getTi()
+                        })
+                },
+                addTi_open: function(){
+                    this.addData.ti = "";
+                    this.addData.show = true;
+                },
+                addTi_close: function(){
+                    this.addData.show = false;
+                    const that = this;
+                    API.add(this.addData.ti)
+                        .then((e)=>{
+                            console.log(e.data)
+                            if (e.data.code != 200){
+                                that.$message.error(e.data.msg);
+                                return;
+                            }
+                            that.$message.success('修改成功！');
+                            that.getTi()
+                        })
+                },
+            },
+        }).use(ElementPlus).mount('#app')
+    </script>
+</body>
+</html>
