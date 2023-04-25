@@ -2,7 +2,7 @@ import cloud from '@lafjs/cloud'
 
 const TIKU_DB = "zz_tiku";
 
-export async function main(ctx: FunctionContext) {
+export async function main(ctx) {
   // body, query 为请求参数, auth 是授权对象
   const { auth, body, query } = ctx;
   const db = cloud.database()
@@ -47,7 +47,7 @@ export async function main(ctx: FunctionContext) {
     case "admin.get":
       const tiDataQuery = await db
         .collection(TIKU_DB)
-        .orderBy("_id", "desc")
+        .orderBy("_id", "asc")
         .get();
       const tiDataFromDbList = tiDataQuery?.data || [];
       var tiData = [];
@@ -65,7 +65,7 @@ export async function main(ctx: FunctionContext) {
         data: tiData,
       }
     case "admin.add":
-      const ti = query?.ti || "";
+      const ti = body?.ti || "";
       if (!ti){
         return {
           action: _action,
@@ -85,19 +85,65 @@ export async function main(ctx: FunctionContext) {
       }
     
     case "admin.addlist":
+      var add_tilist = body?.ti || [];
+      if (typeof (add_tilist) == "string") {
+        add_tilist = [add_tilist];
+      }
+      for (i = 0; i < add_tilist.length; i++) {
+        var add_tilist_id = add_tilist[i];
+        if (!add_tilist_id) { continue }
+        await db
+          .collection(TIKU_DB)
+          .add({
+            ti: add_tilist_id
+          });
+      }
       return {
         action: _action,
         code: 200,
+        msg: "添加成功！"
       }
     case "admin.remove":
+      const remove_id = body?.id || "";
+      await db
+        .collection(TIKU_DB)
+        .where({ _id: remove_id })
+        .remove()
+
       return {
         action: _action,
         code: 200,
+        msg: "删除成功！"
       }
-    case "admin.change":
+    case "admin.removelist":
+      var remove_idlist = body?.id || [];
+      if (typeof (remove_idlist)=="string"){
+        remove_idlist = [remove_idlist];
+      }
+      for (i = 0; i < remove_idlist.length; i++) {
+        var remove_idlist_id = remove_idlist[i];
+        await db
+          .collection(TIKU_DB)
+          .where({ _id: remove_idlist_id })
+          .remove()
+      }
       return {
         action: _action,
         code: 200,
+        msg: "删除成功！"
+      }
+    case "admin.edit":
+      const edit_id = body?.id || "";
+      const edit_ti = body?.ti || "";
+      await db
+        .collection(TIKU_DB)
+        .where({ _id: edit_id })
+        .update({ ti: edit_ti })
+
+      return {
+        action: _action,
+        code: 200,
+        msg: "修改成功！"
       }
   }
 
