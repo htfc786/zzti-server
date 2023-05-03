@@ -20,8 +20,8 @@
 <body>
     <div id="app">
         <el-container>
-            <el-header>
-                <h1 style="display: inline-block;">欢迎使用政治抽提系统题目管理系统</h1>
+            <el-header style="--el-header-height: auto;">
+                <h1 style="display: inline-block; margin: 8px 0 0 0;">欢迎使用政治抽提系统题目管理系统</h1>
                 <div v-if="access_token" style="display: inline-block; margin: 8px;">
                     <span>(管理员：{{ username }})</span>
                     <el-button @click="logout()" type="primary" link>退出登录</el-button>
@@ -31,7 +31,7 @@
                     <el-button @click="setnologin()" type="primary" link>请登录</el-button>
                 </div>
             </el-header>
-            <el-main>
+            <el-main style="--el-main-padding: 8px;">
                 <div class="tools-bar">
                     <el-button type="success" plain @click="addTi_open()">添加题目</el-button>
                     <el-button type="success" plain @click="addlistTi_open()">批量添加题目</el-button>
@@ -221,7 +221,7 @@
                     url: "/",
                     method: 'post',
                     params: {
-                        action: "admin.removelist",
+                        action: "admin.remove",
                     },
                     data: {
                         access_token: localStorage.getItem("access_token"),
@@ -234,7 +234,7 @@
                     url: "/",
                     method: 'post',
                     params: {
-                        action: "admin.addlist",
+                        action: "admin.add",
                     },
                     data:{
                         access_token: localStorage.getItem("access_token"),
@@ -349,6 +349,10 @@
                     
                 },
                 editTi_open: function(tiid,ti){
+                    if (localStorage.getItem("access_token") == null) {
+                        this.loginData.show = true;
+                        return;
+                    }
                     this.editData.tiid = tiid;
                     this.editData.ti = ti;
                     this.editData.show = true;
@@ -367,6 +371,10 @@
                         })
                 },
                 addTi_open: function(){
+                    if (localStorage.getItem("access_token") == null) {
+                        this.loginData.show = true;
+                        return;
+                    }
                     this.addData.ti = "";
                     this.addData.show = true;
                 },
@@ -397,8 +405,12 @@
                     }
                 },
                 del_check: function(){
+                    if (localStorage.getItem("access_token") == null) {
+                        this.loginData.show = true;
+                        return;
+                    }
                     if (!this.checkIdList.length){
-                        that.$message.error('请选择题目！');
+                        this.$message.error('请选择题目！');
                         return;
                     }
                     const that = this
@@ -426,6 +438,10 @@
                         })
                 },
                 addlistTi_open: function(){
+                    if (localStorage.getItem("access_token") == null) {
+                        this.loginData.show = true;
+                        return;
+                    }
                     this.addlistData.ti = "";
                     this.addlistData.show = true;
                 },
