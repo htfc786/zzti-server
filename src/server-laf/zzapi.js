@@ -8,6 +8,13 @@ export async function main(ctx) {
   const db = cloud.database()
 
   const _action = query?.action || "";
+
+  const access_token = body?.access_token || "";
+  const user_info = cloud.parseToken(access_token);
+  if (_action!="generate" && !user_info) {
+    return { code: 401, msg: "请先登录！" };
+  }
+
   switch (_action) {
     case "generate":
       const ti_num = query?.num || "1";

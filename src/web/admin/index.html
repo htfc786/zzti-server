@@ -14,13 +14,22 @@
     
     <script>
         axios.defaults.baseURL = 'https://axskyv.laf.run/zzapi';
+        const LOGINURL = "https://axskyv.laf.run/login";
     </script>
 </head>
 <body>
     <div id="app">
         <el-container>
             <el-header>
-                <h1>欢迎使用政治抽提系统题目管理系统</h1>
+                <h1 style="display: inline-block;">欢迎使用政治抽提系统题目管理系统</h1>
+                <div v-if="access_token" style="display: inline-block; margin: 8px;">
+                    <span>(管理员：{{ username }})</span>
+                    <el-button @click="logout()" type="primary" link>退出登录</el-button>
+                </div>
+                <div v-if="!access_token" style="display: inline-block; margin: 8px;">
+                    <span>(您还未登录！！！)</span>
+                    <el-button @click="setnologin()" type="primary" link>请登录</el-button>
+                </div>
             </el-header>
             <el-main>
                 <div class="tools-bar">
@@ -70,7 +79,7 @@
         </el-container>
         
         <el-dialog v-model="editData.show" title="编辑题目">
-            <el-form :model="form">
+            <el-form>
                 <el-form-item label="题目">
                     <el-input
                         v-model="editData.ti"
@@ -89,7 +98,7 @@
         </el-dialog>
 
         <el-dialog v-model="addData.show" title="添加题目">
-            <el-form :model="form">
+            <el-form>
                 <el-form-item label="题目">
                     <el-input
                         v-model="addData.ti"
@@ -108,7 +117,7 @@
         </el-dialog>
 
         <el-dialog v-model="addlistData.show" title="批量添加题目(一行为一题)">
-            <el-form :model="form">
+            <el-form>
                 <el-form-item label="题目">
                     <el-input
                         v-model="addlistData.ti"
@@ -125,15 +134,45 @@
                 </span>
             </template>
         </el-dialog>
+
+        <el-dialog v-model="loginData.show" title="登录">
+            <el-form>
+                <el-form-item label="用户名">
+                    <el-input v-model="loginData.username"></el-button>
+                </el-form-item>
+                <el-form-item label="密码">
+                    <el-input v-model="loginData.password" type="password" show-password></el-button>
+                </el-form-item>
+            </el-form>
+            <template #footer>
+                <span class="dialog-footer">
+                    <el-button type="primary" @click="login()">登录</el-button>
+                </span>
+            </template>
+        </el-dialog>
+
     </div>
     <script>
         var API = {
+            login: function(username,password){
+                return axios.request({
+                    url: LOGINURL,
+                    method: 'post',
+                    data: {
+                        username: username,
+                        password: password,
+                    },
+                })
+            },
             get: function(){
                 return axios.request({
                     url: "/",
-                    method: 'get',
+                    method: 'post',
                     params: {
                         action: "admin.get",
+                    },
+                    data: {
+                        access_token: localStorage.getItem("access_token"),
                     },
                 })
             },
@@ -146,6 +185,7 @@
                     },
                     data:{
                         id: tiid,
+                        access_token: localStorage.getItem("access_token"),
                     },
                 })
             },
@@ -157,6 +197,7 @@
                         action: "admin.edit",
                     },
                     data:{
+                        access_token: localStorage.getItem("access_token"),
                         id: tiid,
                         ti: ti,
                     },
@@ -170,6 +211,7 @@
                         action: "admin.add",
                     },
                     data:{
+                        access_token: localStorage.getItem("access_token"),
                         ti: ti,
                     },
                 })
@@ -182,6 +224,7 @@
                         action: "admin.removelist",
                     },
                     data: {
+                        access_token: localStorage.getItem("access_token"),
                         id: idlist,
                     },
                 })
@@ -194,6 +237,7 @@
                         action: "admin.addlist",
                     },
                     data:{
+                        access_token: localStorage.getItem("access_token"),
                         ti: tilist,
                     },
                 })
@@ -202,6 +246,8 @@
         Vue.createApp({
             data() {
                 return {
+                    username: "",
+                    access_token: "",
                     tiData: [],
                     checkbox_type: [],
                     checkIdList: [],
@@ -218,17 +264,65 @@
                         show: false,
                         ti: "",
                     },
+                    loginData: {
+                        show: false,
+                        username: "",
+                        password: "",
+                    },
                 }
             },
             mounted: function () {
+                if (localStorage.getItem("access_token") == null) {
+                    //nologin!
+                    this.loginData.show = true;
+                    return;
+                }
+                this.loginData.show = false;
+                this.username = localStorage.getItem("username");
+                this.access_token = localStorage.getItem("access_token");
+
                 this.getTi()
             },
             methods: {
+                login: function(){
+                    API.login(this.loginData.username, this.loginData.password)
+                        .then(e=>{
+                            if (e.data.code!=200){
+                                this.$messageBox.alert(e.data.error, '登录错误', {type: 'error'})
+                                return;
+                            }
+                            localStorage.setItem('username', this.loginData.username);
+                            localStorage.setItem('access_token', e.data.access_token);
+                            this.username = localStorage.getItem("username");
+                            this.access_token = localStorage.getItem("access_token");
+                            
+                            this.loginData.show = false;
+
+                            this.$messageBox.alert(e.data.msg, '登录成功', {type: 'success'})
+
+                            this.getTi()
+                        })
+                },
+                setnologin: function(){
+                    localStorage.removeItem("username")
+                    localStorage.removeItem("access_token")
+                    this.loginData.show = true;
+                },
+                logout: function(){
+                    localStorage.removeItem("username")
+                    localStorage.removeItem("access_token")
+                    location.reload();
+                },
                 getTi: function(){
                     const that = this
-                    API.get().then(e=>{
-                        that.tiData = e.data.data;
-                    })
+                    API.get()
+                        .then(e=>{
+                            if (e.data.code==401){
+                                that.setnologin()
+                                return;
+                            }
+                            that.tiData = e.data.data;
+                        })
                 },
                 delTi: function(tiid,ti){
                     const that = this
@@ -244,6 +338,10 @@
                         .then(() => {
                             API.remove(tiid)
                             .then(e=>{
+                                if (e.data.code==401){
+                                    that.setnologin()
+                                    return;
+                                }
                                 that.$message.success('删除成功！');
                                 this.getTi()
                             })
@@ -259,7 +357,11 @@
                     this.editData.show = false;
                     const that = this;
                     API.edit(this.editData.tiid, this.editData.ti)
-                        .then(()=>{
+                        .then((e)=>{
+                            if (e.data.code==401){
+                                that.setnologin()
+                                return;
+                            }
                             that.$message.success('修改成功！');
                             that.getTi()
                         })
@@ -273,6 +375,10 @@
                     const that = this;
                     API.add(this.addData.ti)
                         .then((e)=>{
+                            if (e.data.code==401){
+                                that.setnologin()
+                                return;
+                            }
                             if (e.data.code != 200){
                                 that.$message.error(e.data.msg);
                                 return;
@@ -308,6 +414,10 @@
                         .then(() => {
                             API.remove_list(that.checkIdList)
                             .then(e=>{
+                                if (e.data.code==401){
+                                    that.setnologin()
+                                    return;
+                                }
                                 that.$message.success('批量删除成功！');
                                 that.getTi()
                                 that.checkbox_type = []
@@ -321,7 +431,7 @@
                 },
                 addlistTi_close: function(){
                     if (!this.addlistData.ti){
-                        that.$message.error('请输入内容！');
+                        this.$message.error('请输入内容！');
                         return;
                     }
                     this.addlistData.show = false;
@@ -332,6 +442,10 @@
                     const that = this;
                     API.addlist(data)
                         .then((e)=>{
+                            if (e.data.code==401){
+                                that.setnologin()
+                                return;
+                            }
                             if (e.data.code != 200){
                                 that.$message.error(e.data.msg);
                                 return;
