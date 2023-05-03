@@ -11,7 +11,7 @@ export async function main(ctx) {
 
   const access_token = body?.access_token || "";
   const user_info = cloud.parseToken(access_token);
-  if (_action!="generate" && !user_info) {
+  if (_action != "generate" && !user_info) {
     return { code: 401, msg: "请先登录！" };
   }
 
@@ -20,26 +20,37 @@ export async function main(ctx) {
       const ti_num = query?.num || "1";
       var num = Number(ti_num);
 
-      const generate_tiDataQuery = await db
+      var tiDataFromDbList = [];
+      //需要多少次
+      var tiNumQuery = await db //解决数据库读取限制
         .collection(TIKU_DB)
-        .orderBy("_id", "desc")
-        .get();
-      console.log(generate_tiDataQuery)
-      const generate_tiData = generate_tiDataQuery?.data || [];
-      
+        .count()
+      var tinum = tiNumQuery?.total || 0;
+      var alltipage = Math.ceil(tinum / 100);
+      for (i = 0; i < alltipage; i++) {
+        const tiDataQuery = await db
+          .collection(TIKU_DB)
+          .orderBy("_id", "asc")
+          .skip(i * 100)
+          .limit(100)
+          .get()
+        const tiDataFromDbList_some = tiDataQuery?.data || [];
+        tiDataFromDbList = tiDataFromDbList.concat(tiDataFromDbList_some);
+      }
+
       var tiku = []
-      for (var i = 0; i < generate_tiData.length; i++) {
-        const tiDataFromDb = generate_tiData[i];
+      for (var i = 0; i < tiDataFromDbList.length; i++) {
+        const tiDataFromDb = tiDataFromDbList[i];
         tiku.push(tiDataFromDb.ti);
       }
-      if(ti_num=="all" || num>=tiku.length){
+      if (ti_num == "all" || num >= tiku.length) {
         num = tiku.length;
       }
       var tidata = [];
-      for (var i=0;i<num;i++){
-        var random_index = Math.floor(Math.random()*tiku.length);
+      for (var i = 0; i < num; i++) {
+        var random_index = Math.floor(Math.random() * tiku.length);
         var random_ti = tiku[random_index];
-        tiku.splice(random_index,1)
+        tiku.splice(random_index, 1)
         tidata.push(random_ti)
       }
       return {
@@ -50,13 +61,25 @@ export async function main(ctx) {
           tidata: tidata,
         },
       }
-    
+
     case "admin.get":
-      const tiDataQuery = await db
+      var tiDataFromDbList = [];
+      //需要多少次
+      const tiDataNumQuery = await db //解决数据库读取限制
         .collection(TIKU_DB)
-        .orderBy("_id", "asc")
-        .get();
-      const tiDataFromDbList = tiDataQuery?.data || [];
+        .count()
+      var tinum = tiDataNumQuery?.total || 0;
+      var alltipage = Math.ceil(tinum / 100);
+      for (i = 0; i < alltipage; i++) {
+        const tiDataQuery = await db
+          .collection(TIKU_DB)
+          .orderBy("_id", "asc")
+          .skip(i * 100)
+          .limit(100)
+          .get()
+        const tiDataFromDbList_some = tiDataQuery?.data || [];
+        tiDataFromDbList = tiDataFromDbList.concat(tiDataFromDbList_some);
+      }
       var tiData = [];
       for (var i = 0; i < tiDataFromDbList.length; i++) {
         const tiDataFromDb = tiDataFromDbList[i];
@@ -72,26 +95,6 @@ export async function main(ctx) {
         data: tiData,
       }
     case "admin.add":
-      const ti = body?.ti || "";
-      if (!ti){
-        return {
-          action: _action,
-          code: 400,
-          msg: "请传入正确的参数！"
-        }
-      }
-      const { id } = await db
-      .collection(TIKU_DB)
-      .add({
-        ti: ti
-      });
-      return {
-        action: _action,
-        code: 200,
-        msg: "添加成功！"
-      }
-    
-    case "admin.addlist":
       var add_tilist = body?.ti || [];
       if (typeof (add_tilist) == "string") {
         add_tilist = [add_tilist];
@@ -111,20 +114,8 @@ export async function main(ctx) {
         msg: "添加成功！"
       }
     case "admin.remove":
-      const remove_id = body?.id || "";
-      await db
-        .collection(TIKU_DB)
-        .where({ _id: remove_id })
-        .remove()
-
-      return {
-        action: _action,
-        code: 200,
-        msg: "删除成功！"
-      }
-    case "admin.removelist":
       var remove_idlist = body?.id || [];
-      if (typeof (remove_idlist)=="string"){
+      if (typeof (remove_idlist) == "string") {
         remove_idlist = [remove_idlist];
       }
       for (i = 0; i < remove_idlist.length; i++) {
