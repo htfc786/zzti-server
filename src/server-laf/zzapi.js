@@ -95,13 +95,23 @@ export async function main(ctx) {
         data: tiData,
       }
     case "admin.add":
+      const isDelSame = body?.isDelSame || "false"
       var add_tilist = body?.ti || [];
       if (typeof (add_tilist) == "string") {
         add_tilist = [add_tilist];
       }
       for (i = 0; i < add_tilist.length; i++) {
         var add_tilist_id = add_tilist[i];
-        if (!add_tilist_id) { continue }
+        if (!add_tilist_id) { continue } //空字符串
+        //去重
+        if (isDelSame=="true"){
+          var tiCount = await db
+            .collection(TIKU_DB)
+            .where({ ti: add_tilist_id })
+            .count();
+          if (tiCount.total != 0) { continue } 
+        }
+        //插入
         await db
           .collection(TIKU_DB)
           .add({
