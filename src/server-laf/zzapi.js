@@ -1,6 +1,7 @@
 import cloud from '@lafjs/cloud'
 
 const TIKU_DB = "zz_tiku";
+const PAGESIZE = 10;
 
 export async function main(ctx) {
   // body, query 为请求参数, auth 是授权对象
@@ -20,7 +21,7 @@ export async function main(ctx) {
       const ti_num = query?.num || "1";
       var num = Number(ti_num);
 
-      var tiDataFromDbList = [];
+      var tiDataFromDbList_generate = [];
       //需要多少次
       var tiNumQuery = await db //解决数据库读取限制
         .collection(TIKU_DB)
@@ -35,12 +36,12 @@ export async function main(ctx) {
           .limit(100)
           .get()
         const tiDataFromDbList_some = tiDataQuery?.data || [];
-        tiDataFromDbList = tiDataFromDbList.concat(tiDataFromDbList_some);
+        tiDataFromDbList_generate = tiDataFromDbList_generate.concat(tiDataFromDbList_some);
       }
 
       var tiku = []
-      for (var i = 0; i < tiDataFromDbList.length; i++) {
-        const tiDataFromDb = tiDataFromDbList[i];
+      for (var i = 0; i < tiDataFromDbList_generate.length; i++) {
+        const tiDataFromDb = tiDataFromDbList_generate[i];
         tiku.push(tiDataFromDb.ti);
       }
       if (ti_num == "all" || num >= tiku.length) {
@@ -63,27 +64,27 @@ export async function main(ctx) {
       }
 
     case "admin.get":
-      var tiDataFromDbList = [];
+      const page = body?.page || 1;
       //需要多少次
       const tiDataNumQuery = await db //解决数据库读取限制
         .collection(TIKU_DB)
         .count()
       var tinum = tiDataNumQuery?.total || 0;
-      var alltipage = Math.ceil(tinum / 100);
-      for (i = 0; i < alltipage; i++) {
-        const tiDataQuery = await db
-          .collection(TIKU_DB)
-          .orderBy("_id", "asc")
-          .skip(i * 100)
-          .limit(100)
-          .get()
-        const tiDataFromDbList_some = tiDataQuery?.data || [];
-        tiDataFromDbList = tiDataFromDbList.concat(tiDataFromDbList_some);
-      }
+      var pageNum = Math.ceil(tinum / PAGESIZE);
+      //查询
+      const tiDataQuery = await db
+        .collection(TIKU_DB)
+        .orderBy("_id", "asc")
+        .skip((page - 1)  * PAGESIZE)
+        .limit(PAGESIZE)
+        .get()
+      const tiDataFromDbList = tiDataQuery?.data || [];
       var tiData = [];
       for (var i = 0; i < tiDataFromDbList.length; i++) {
         const tiDataFromDb = tiDataFromDbList[i];
+        var index = ((page - 1) * PAGESIZE) + (i + 1);
         tiData.push({
+          index: index,
           id: tiDataFromDb._id,
           ti: tiDataFromDb.ti,
         });
@@ -93,6 +94,7 @@ export async function main(ctx) {
         code: 200,
         msg: "查询成功！",
         data: tiData,
+        pageNum: pageNum,
       }
     case "admin.add":
       const isDelSame = body?.isDelSame || "false"

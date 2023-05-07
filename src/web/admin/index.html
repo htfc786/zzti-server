@@ -6,7 +6,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>政治抽提系统题目管理系统</title>
 
-    <link rel="stylesheet" href="./admin.css" />
     <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css" />
     <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
@@ -33,48 +32,27 @@
             </el-header>
             <el-main style="--el-main-padding: 8px;">
                 <div class="tools-bar">
-                    <el-button type="success" plain @click="addTi_open()">添加题目</el-button>
-                    <el-button type="success" plain @click="addlistTi_open()">批量添加题目</el-button>
-                    <el-button type="danger" plain @click="del_check()">删除所选题目</el-button>
+                    <el-button type="success" @click="addTi_open()">添加题目</el-button>
+                    <el-button type="success" @click="addlistTi_open()">批量添加题目</el-button>
+                    <el-button type="danger" @click="del_check()">删除所选题目</el-button>
                 </div>
-                <div class="container">
-                    <!--面板的情景样式-->
-                    <div class="panel">
-                        <!--暂无数据-->
-                        <div class="panel-heading" v-if="!tiData.length"> 
-                            <h3 class="panel-title">暂无数据</h3>
-                        </div>
-                        <!--面板的主体-->
-                        <!--在面板中嵌入一个表格-->
-                        <table class="table" v-if="tiData.length">
-                            <thead>
-                                <tr class="bg-success">
-                                    <td style="width: 10px;"></td>
-                                    <td style="width: 10px;">#</td>
-                                    <td>题目</td>
-                                    <td>操作</td>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr v-for="(item, index) in tiData">
-                                    <td>
-                                        <input 
-                                            type="checkbox" 
-                                            v-model="checkbox_type[index]"
-                                            @click="checkbox_click(index,item.id)"
-                                        />
-                                    </td>
-                                    <td>{{ index + 1 }}</td>
-                                    <td class="ticlass">{{ item.ti }}</td>
-                                    <td>
-                                        <a @click="editTi_open(item.id,item.ti)">编辑</a> |
-                                        <a @click="delTi(item.id,item.ti)">删除</a>
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
+                <el-table :data="tiData" border style="width: 100%" @selection-change="checkbox_click">
+                    <el-table-column type="selection" width="40"></el-table-column>
+                    <el-table-column prop="index" label="#" width="60"></el-table-column>
+                    <el-table-column prop="ti" label="题目"></el-table-column>
+                    <el-table-column fixed="right" label="操作" width="140">
+                        <template #default="scope">
+                            <el-button @click="editTi_open(scope.row.id,scope.row.ti)" size="small">编辑</el-button>
+                            <el-button @click="delTi(scope.row.id,scope.row.ti)" type="danger" size="small">删除</el-button>
+                        </template>
+                    </el-table-column>
+                </el-table>
+                <el-pagination 
+                    background
+                    layout="prev, pager, next"
+                    :total="pageNum * 10"
+                    @current-change="changePage"
+                ></el-pagination>
             </el-main>
         </el-container>
         
@@ -167,7 +145,7 @@
                     },
                 })
             },
-            get: function(){
+            get: function(page){
                 return axios.request({
                     url: "/",
                     method: 'post',
@@ -176,6 +154,7 @@
                     },
                     data: {
                         access_token: localStorage.getItem("access_token"),
+                        page: page,
                     },
                 })
             },
@@ -254,7 +233,7 @@
                     username: "",
                     access_token: "",
                     tiData: [],
-                    checkbox_type: [],
+                    pageNum: 1,
                     checkIdList: [],
                     editData: {
                         show: false,
@@ -270,11 +249,7 @@
                         ti: "",
                         isDelSame: true,
                     },
-                    loginData: {
-                        show: false,
-                        username: "",
-                        password: "",
-                    },
+                    loginData: { show: false, username: "", password: "" },
                 }
             },
             mounted: function () {
@@ -320,14 +295,22 @@
                     location.reload();
                 },
                 getTi: function(){
+                    this.getTi_page(1);
+                },
+                changePage: function(val){
+                    this.getTi_page(val)
+                },
+                getTi_page: function(page){
                     const that = this
-                    API.get()
+                    this.tiData = [];
+                    API.get(page)
                         .then(e=>{
                             if (e.data.code==401){
                                 that.setnologin()
                                 return;
                             }
                             that.tiData = e.data.data;
+                            that.pageNum = e.data.pageNum;
                         })
                 },
                 delTi: function(tiid,ti){
@@ -401,16 +384,17 @@
                             that.getTi()
                         })
                 },
-                checkbox_click: function(index,id){
-                    if(this.checkbox_type[index]){ //true=>false
-                        this.checkbox_type[index] = !this.checkbox_type[index]; //不想选了！
-                        this.checkIdList.splice(this.checkIdList.indexOf(id),1); //删除选择元素
-                    } else {    //false=>true
-                        this.checkbox_type[index] = !this.checkbox_type[index]; //想选！
-                        this.checkIdList.push(id); //添加选择元素
+                checkbox_click: function(val){
+                    console.log(val)
+                    var checklist = [];
+                    for (var i = 0; i < val.length; i++) {
+                        val_row = val[i];
+                        checklist.push(val_row.id);
                     }
+                    this.checkIdList = checklist;
                 },
                 del_check: function(){
+                    console.log(this.checkIdList)
                     if (localStorage.getItem("access_token") == null) {
                         this.loginData.show = true;
                         return;
@@ -438,7 +422,6 @@
                                 }
                                 that.$message.success('批量删除成功！');
                                 that.getTi()
-                                that.checkbox_type = []
                                 that.checkIdList = []
                             })
                         })
@@ -477,6 +460,7 @@
                             that.getTi()
                         })
                 },
+                
             },
         }).use(ElementPlus).mount('#app')
     </script>
