@@ -33,7 +33,6 @@
             <el-main style="--el-main-padding: 8px;">
                 <div class="tools-bar">
                     <el-button type="success" @click="addTi_open()">添加题目</el-button>
-                    <el-button type="success" @click="addlistTi_open()">批量添加题目</el-button>
                     <el-button type="danger" @click="del_check()">删除所选题目</el-button>
                 </div>
                 <el-table :data="tiData" border style="width: 100%" @selection-change="checkbox_click">
@@ -47,24 +46,14 @@
                         </template>
                     </el-table-column>
                 </el-table>
-                <el-pagination 
-                    background
-                    layout="prev, pager, next"
-                    :total="pageNum * 10"
-                    @current-change="changePage"
-                ></el-pagination>
+                <el-pagination background layout="prev, pager, next" :total="pagination_total" @current-change="changePage" ></el-pagination>
             </el-main>
         </el-container>
         
         <el-dialog v-model="editData.show" title="编辑题目">
             <el-form>
                 <el-form-item label="题目">
-                    <el-input
-                        v-model="editData.ti"
-                        autosize
-                        type="textarea"
-                        placeholder="请输入题目"
-                    ></el-input>
+                    <el-input v-model="editData.ti" autosize type="textarea" placeholder="请输入题目" ></el-input>
                 </el-form-item>
             </el-form>
             <template #footer>
@@ -77,41 +66,26 @@
 
         <el-dialog v-model="addData.show" title="添加题目">
             <el-form>
+                <el-form-item label="添加方式" prop="delivery">
+                    <el-radio-group v-model="addData.type">
+                        <el-radio-button label="single">单个添加</el-radio-button>
+                        <el-radio-button label="multiple">批量添加</el-radio-button>
+                    </el-radio-group>
+                </el-form-item>
+                <el-form-item label="使用去重" prop="deltisivery">
+                    <el-switch v-model="addData.isDelSame" />
+                </el-form-item>
                 <el-form-item label="题目">
-                    <el-input
-                        v-model="addData.ti"
-                        autosize
-                        type="textarea"
-                        placeholder="请输入题目"
-                    ></el-input>
+                    <el-alert v-if="addData.type=='multiple'" show-icon :closable="false" style="height:30px">
+                        <p>提示：一行为一题</p>
+                    </el-alert><!--多行提示-->
+                    <el-input v-model="addData.ti" autosize type="textarea" placeholder="请输入题目" ></el-input>
                 </el-form-item>
             </el-form>
             <template #footer>
                 <span class="dialog-footer">
-                    <el-button @click="addData.show = false">关闭</el-button>
+                    <el-button @click="addData.show = false;">关闭</el-button>
                     <el-button type="primary" @click="addTi_close()">完成</el-button>
-                </span>
-            </template>
-        </el-dialog>
-
-        <el-dialog v-model="addlistData.show" title="批量添加题目(一行为一题)">
-            <el-form>
-                <el-form-item label="使用去重" prop="delivery">
-                    <el-switch v-model="addlistData.isDelSame" />
-                </el-form-item>
-                <el-form-item label="题目">
-                    <el-input
-                        v-model="addlistData.ti"
-                        autosize
-                        type="textarea"
-                        placeholder="请输入题目"
-                    ></el-input>
-                </el-form-item>
-            </el-form>
-            <template #footer>
-                <span class="dialog-footer">
-                    <el-button @click="addlistData.show = false;">关闭</el-button>
-                    <el-button type="primary" @click="addlistTi_close()">完成</el-button>
                 </span>
             </template>
         </el-dialog>
@@ -135,95 +109,35 @@
     </div>
     <script>
         var API = {
+            token: localStorage.getItem("access_token"),
             login: function(username,password){
                 return axios.request({
-                    url: LOGINURL,
-                    method: 'post',
-                    data: {
-                        username: username,
-                        password: password,
-                    },
+                    url: LOGINURL, method: 'post',
+                    data: { username: username, password: password, },
                 })
             },
             get: function(page){
                 return axios.request({
-                    url: "/",
-                    method: 'post',
-                    params: {
-                        action: "admin.get",
-                    },
-                    data: {
-                        access_token: localStorage.getItem("access_token"),
-                        page: page,
-                    },
+                    url: "/", method: 'post', params: { action: "admin.get" },
+                    data: { access_token: this.token, page: page, },
                 })
             },
             remove: function(tiid){
                 return axios.request({
-                    url: "/",
-                    method: 'post',
-                    params: {
-                        action: "admin.remove",
-                    },
-                    data:{
-                        id: tiid,
-                        access_token: localStorage.getItem("access_token"),
-                    },
+                    url: "/", method: 'post', params: { action: "admin.remove" },
+                    data:{ id: tiid, access_token: this.token, },
                 })
             },
             edit: function(tiid,ti){
                 return axios.request({
-                    url: "/",
-                    method: 'post',
-                    params: {
-                        action: "admin.edit",
-                    },
-                    data:{
-                        access_token: localStorage.getItem("access_token"),
-                        id: tiid,
-                        ti: ti,
-                    },
+                    url: "/", method: 'post', params: { action: "admin.edit" },
+                    data:{ access_token: this.token, id: tiid, ti: ti, },
                 })
             },
-            add: function(ti){
+            add: function(ti,isDelSame_text){
                 return axios.request({
-                    url: "/",
-                    method: 'post',
-                    params: {
-                        action: "admin.add",
-                    },
-                    data:{
-                        access_token: localStorage.getItem("access_token"),
-                        ti: ti,
-                    },
-                })
-            },
-            remove_list: function(idlist){
-                return axios.request({
-                    url: "/",
-                    method: 'post',
-                    params: {
-                        action: "admin.remove",
-                    },
-                    data: {
-                        access_token: localStorage.getItem("access_token"),
-                        id: idlist,
-                    },
-                })
-            },
-            addlist: function(tilist, isDelSame){
-                isDelSame_text = isDelSame == true ? "true" : "false";
-                return axios.request({
-                    url: "/",
-                    method: 'post',
-                    params: {
-                        action: "admin.add",
-                    },
-                    data:{
-                        access_token: localStorage.getItem("access_token"),
-                        isDelSame: isDelSame_text,
-                        ti: tilist,
-                    },
+                    url: "/",  method: 'post', params: { action: "admin.add" },
+                    data:{ access_token: this.token, isDelSame: isDelSame_text, ti: ti, },
                 })
             },
         }
@@ -234,27 +148,15 @@
                     access_token: "",
                     tiData: [],
                     pageNum: 1,
+                    pageNow: 1,
                     checkIdList: [],
-                    editData: {
-                        show: false,
-                        tiid: "",
-                        ti: "",
-                    },
-                    addData: {
-                        show: false,
-                        ti: "",
-                    },
-                    addlistData: {
-                        show: false,
-                        ti: "",
-                        isDelSame: true,
-                    },
+                    editData: { show: false, tiid: "", ti: "", },
+                    addData: { show: false, type: "single", ti: "", isDelSame: true, },
                     loginData: { show: false, username: "", password: "" },
                 }
             },
             mounted: function () {
-                if (localStorage.getItem("access_token") == null) {
-                    //nologin!
+                if (localStorage.getItem("access_token") == null) {//nologin!
                     this.loginData.show = true;
                     return;
                 }
@@ -263,6 +165,11 @@
                 this.access_token = localStorage.getItem("access_token");
 
                 this.getTi()
+            },
+            computed: {
+                pagination_total() {
+                    return this.pageNum * 10;
+                },
             },
             methods: {
                 login: function(){
@@ -295,9 +202,10 @@
                     location.reload();
                 },
                 getTi: function(){
-                    this.getTi_page(1);
+                    this.getTi_page(this.pageNow);
                 },
                 changePage: function(val){
+                    this.pageNow = val;
                     this.getTi_page(val)
                 },
                 getTi_page: function(page){
@@ -305,32 +213,20 @@
                     this.tiData = [];
                     API.get(page)
                         .then(e=>{
-                            if (e.data.code==401){
-                                that.setnologin()
-                                return;
-                            }
+                            if (e.data.code==401){ that.setnologin(); return; }
+
                             that.tiData = e.data.data;
                             that.pageNum = e.data.pageNum;
                         })
                 },
                 delTi: function(tiid,ti){
                     const that = this
-                    this.$messageBox.confirm(
-                        '确定要删除“'+ti+'”吗？',
-                        '删除操作',
-                        {
-                            confirmButtonText: '删除',
-                            cancelButtonText: '取消',
-                            type: 'warning',
-                        }
-                    )
+                    this.$messageBox.confirm( '确定要删除“'+ti+'”吗？', '删除操作', { confirmButtonText: '删除', cancelButtonText: '取消', type: 'warning' })
                         .then(() => {
                             API.remove(tiid)
                             .then(e=>{
-                                if (e.data.code==401){
-                                    that.setnologin()
-                                    return;
-                                }
+                                if (e.data.code==401){ that.setnologin(); return; }
+
                                 that.$message.success('删除成功！');
                                 this.getTi()
                             })
@@ -351,36 +247,9 @@
                     const that = this;
                     API.edit(this.editData.tiid, this.editData.ti)
                         .then((e)=>{
-                            if (e.data.code==401){
-                                that.setnologin()
-                                return;
-                            }
+                            if (e.data.code==401){ that.setnologin(); return; }
+
                             that.$message.success('修改成功！');
-                            that.getTi()
-                        })
-                },
-                addTi_open: function(){
-                    if (localStorage.getItem("access_token") == null) {
-                        this.loginData.show = true;
-                        return;
-                    }
-                    this.addData.ti = "";
-                    this.addData.show = true;
-                },
-                addTi_close: function(){
-                    this.addData.show = false;
-                    const that = this;
-                    API.add(this.addData.ti)
-                        .then((e)=>{
-                            if (e.data.code==401){
-                                that.setnologin()
-                                return;
-                            }
-                            if (e.data.code != 200){
-                                that.$message.error(e.data.msg);
-                                return;
-                            }
-                            that.$message.success('添加成功！');
                             that.getTi()
                         })
                 },
@@ -394,7 +263,6 @@
                     this.checkIdList = checklist;
                 },
                 del_check: function(){
-                    console.log(this.checkIdList)
                     if (localStorage.getItem("access_token") == null) {
                         this.loginData.show = true;
                         return;
@@ -404,54 +272,45 @@
                         return;
                     }
                     const that = this
-                    this.$messageBox.confirm(
-                        '确定要删除所选的 '+this.checkIdList.length+' 道题吗？',
-                        '批量删除',
-                        {
-                            confirmButtonText: '删除',
-                            cancelButtonText: '取消',
-                            type: 'warning',
-                        }
-                    )
+                    this.$messageBox.confirm('确定要删除所选的 '+this.checkIdList.length+' 道题吗？', '批量删除', { confirmButtonText: '删除', cancelButtonText: '取消', type: 'warning' })
                         .then(() => {
-                            API.remove_list(that.checkIdList)
+                            API.remove(that.checkIdList)
                             .then(e=>{
-                                if (e.data.code==401){
-                                    that.setnologin()
-                                    return;
-                                }
+                                if (e.data.code==401){ that.setnologin(); return; }
+
                                 that.$message.success('批量删除成功！');
                                 that.getTi()
                                 that.checkIdList = []
                             })
                         })
                 },
-                addlistTi_open: function(){
+                addTi_open: function(){
                     if (localStorage.getItem("access_token") == null) {
                         this.loginData.show = true;
                         return;
                     }
-                    this.addlistData.ti = "";
-                    this.addlistData.isDelSame = true;
-                    this.addlistData.show = true;
+                    this.addData.ti = "";
+                    this.addData.isDelSame = true;
+                    this.addData.show = true;
                 },
-                addlistTi_close: function(){
-                    if (!this.addlistData.ti){
+                addTi_close: function(){
+                    if (!this.addData.ti){
                         this.$message.error('请输入内容！');
                         return;
                     }
-                    this.addlistData.show = false;
+                    this.addData.show = false;
                     //处理一下
-                    var data = this.addlistData.ti.split("\n");
-                    data.forEach((item, index) => { if (!item) { data.splice(index, 1); } })
+                    if (this.addData.type=="single"){
+                        var data = this.addData.ti
+                    } else if(this.addData.type=="multiple"){
+                        var data = this.addData.ti.split("\n");
+                        data.forEach((item, index) => { if (!item) { data.splice(index, 1); } })
+                    }
 
                     const that = this;
-                    API.addlist(data, this.addlistData.isDelSame)
+                    API.add(data, this.addData.isDelSame)
                         .then((e)=>{
-                            if (e.data.code==401){
-                                that.setnologin()
-                                return;
-                            }
+                            if (e.data.code==401){ that.setnologin(); return; }
                             if (e.data.code != 200){
                                 that.$message.error(e.data.msg);
                                 return;
@@ -459,8 +318,7 @@
                             that.$message.success(e.data.msg);
                             that.getTi()
                         })
-                },
-                
+                },             
             },
         }).use(ElementPlus).mount('#app')
     </script>
