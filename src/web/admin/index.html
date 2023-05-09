@@ -70,16 +70,20 @@
                     <el-radio-group v-model="addData.type">
                         <el-radio-button label="single">单个添加</el-radio-button>
                         <el-radio-button label="multiple">批量添加</el-radio-button>
+                        <el-radio-button label="file">文件添加</el-radio-button>
                     </el-radio-group>
                 </el-form-item>
                 <el-form-item label="使用去重" prop="deltisivery">
-                    <el-switch v-model="addData.isDelSame" />
+                    <el-switch v-model="addData.isDelSame"></el-switch>
                 </el-form-item>
-                <el-form-item label="题目">
+                <el-form-item label="题目" v-if="addData.type!='file'">
                     <el-alert v-if="addData.type=='multiple'" show-icon :closable="false" style="height:30px">
                         <p>提示：一行为一题</p>
                     </el-alert><!--多行提示-->
                     <el-input v-model="addData.ti" autosize type="textarea" placeholder="请输入题目" ></el-input>
+                </el-form-item>
+                <el-form-item label="文件" prop="deltisivery" v-if="addData.type=='file'">
+                    <input ref="tiFileUpload" type="file" accept=".txt"/>
                 </el-form-item>
             </el-form>
             <template #footer>
@@ -138,6 +142,12 @@
                 return axios.request({
                     url: "/",  method: 'post', params: { action: "admin.add" },
                     data:{ access_token: this.token, isDelSame: isDelSame_text, ti: ti, },
+                })
+            },
+            add_file: function(fd){
+                return axios.request({
+                    url: "/",  method: 'post', params: { action: "admin.add_file" },
+                    data: fd,
                 })
             },
         }
@@ -294,6 +304,10 @@
                     this.addData.show = true;
                 },
                 addTi_close: function(){
+                    if(this.addData.type=='file'){
+                        this.addTi_file();
+                        return;
+                    }
                     if (!this.addData.ti){
                         this.$message.error('请输入内容！');
                         return;
@@ -318,7 +332,34 @@
                             that.$message.success(e.data.msg);
                             that.getTi()
                         })
-                },             
+                }, 
+                addTi_file: function(){
+                    const uploadFiles = this.$refs['tiFileUpload'];
+                    // 没有选择文件
+                    if (!uploadFiles.files[0]) {
+                        this.$message.error('请选择文件！');
+                        return;
+                    }
+                    this.addData.show = false;
+                    //添加fd
+                    let fd = new FormData(); 
+                    fd.append("access_token", this.access_token);
+                    fd.append("isDelSame", this.addData.isDelSame);
+                    for (var i=0;i<uploadFiles.files.length;i++) {
+                        fd.append("files["+i+"]", uploadFiles.files[i]);
+                    }
+                    //请求
+                    API.add_file(fd)
+                        .then((e)=>{
+                            if (e.data.code==401){ that.setnologin(); return; }
+                            if (e.data.code != 200){
+                                that.$message.error(e.data.msg);
+                                return;
+                            }
+                            that.$message.success(e.data.msg);
+                            that.getTi()
+                        })
+                },         
             },
         }).use(ElementPlus).mount('#app')
     </script>
