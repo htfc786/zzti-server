@@ -264,7 +264,6 @@
                         })
                 },
                 checkbox_click: function(val){
-                    console.log(val)
                     var checklist = [];
                     for (var i = 0; i < val.length; i++) {
                         val_row = val[i];
@@ -349,6 +348,7 @@
                         fd.append("files["+i+"]", uploadFiles.files[i]);
                     }
                     //请求
+                    const that = this;
                     API.add_file(fd)
                         .then((e)=>{
                             if (e.data.code==401){ that.setnologin(); return; }
@@ -357,6 +357,7 @@
                                 return;
                             }
                             that.$message.success(e.data.msg);
+                            uploadFiles.value = '';//清空选择的文件
                             that.getTi()
                         })
                 },         
