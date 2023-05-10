@@ -1,4 +1,5 @@
 import cloud from '@lafjs/cloud'
+var fs = require("fs");
 
 const TIKU_DB = "zz_tiku";
 const PAGESIZE = 10;
@@ -97,7 +98,7 @@ export async function main(ctx) {
         pageNum: pageNum,
       }
     case "admin.add":
-      const isDelSame = body?.isDelSame || "false"
+      var isDelSame = body?.isDelSame || "false"
       var add_tilist = body?.ti || [];
       if (typeof (add_tilist) == "string") {
         add_tilist = [add_tilist];
@@ -112,6 +113,45 @@ export async function main(ctx) {
             .where({ ti: add_tilist_id })
             .count();
           if (tiCount.total != 0) { continue } 
+        }
+        //插入
+        await db
+          .collection(TIKU_DB)
+          .add({
+            ti: add_tilist_id
+          });
+      }
+      return {
+        action: _action,
+        code: 200,
+        msg: "添加成功！"
+      }
+    case "admin.add_file":
+      var isDelSame = body?.isDelSame || "false";
+      //获取上传文件的对象
+      var data = await fs.readFileSync(ctx.files[0].path);
+      
+      try {
+        var add_list = data.toString().split("\n");
+        add_list.forEach((item, index) => { if (!item) { data.splice(index, 1); } })
+      } catch(err) {
+        return {
+          action: _action,
+          code: 400,
+          msg: "请上传正确格式的文件！",
+        }
+      }
+      
+      for (i = 0; i < add_list.length; i++) {
+        var add_tilist_id = add_list[i];
+        if (!add_tilist_id) { continue } //空字符串
+        //去重
+        if (isDelSame == "true") {
+          var tiCount = await db
+            .collection(TIKU_DB)
+            .where({ ti: add_tilist_id })
+            .count();
+          if (tiCount.total != 0) { continue }
         }
         //插入
         await db
