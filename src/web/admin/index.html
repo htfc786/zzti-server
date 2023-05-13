@@ -193,6 +193,7 @@
                             localStorage.setItem('access_token', e.data.access_token);
                             this.username = localStorage.getItem("username");
                             this.access_token = localStorage.getItem("access_token");
+                            API.token = localStorage.getItem("access_token");
                             
                             this.loginData.show = false;
 
