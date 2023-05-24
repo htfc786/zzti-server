@@ -12,8 +12,7 @@
     <script src="https://unpkg.com/element-plus"></script>
     
     <script>
-        axios.defaults.baseURL = 'https://axskyv.laf.run/zzapi';
-        const LOGINURL = "https://axskyv.laf.run/login";
+        axios.defaults.baseURL = 'https://axskyv.laf.run/zzadmin';
     </script>
 </head>
 <body>
@@ -103,9 +102,29 @@
                     <el-input v-model="loginData.password" type="password" show-password></el-button>
                 </el-form-item>
             </el-form>
+            没有账号？<el-button type="primary" @click="registerData.show = true;" link>注册</el-button>
             <template #footer>
                 <span class="dialog-footer">
                     <el-button type="primary" @click="login()">登录</el-button>
+                </span>
+            </template>
+        </el-dialog>
+
+        <el-dialog v-model="registerData.show" title="注册">
+            <el-form>
+                <el-form-item label="用户名">
+                    <el-input v-model="registerData.username"></el-button>
+                </el-form-item>
+                <el-form-item label="密码">
+                    <el-input v-model="registerData.password" type="password" show-password></el-button>
+                </el-form-item>
+                <el-form-item label="确认密码">
+                    <el-input v-model="registerData.confirm" type="password" show-password></el-button>
+                </el-form-item>
+            </el-form>
+            <template #footer>
+                <span class="dialog-footer">
+                    <el-button type="primary" @click="register()">注册</el-button>
                 </span>
             </template>
         </el-dialog>
@@ -116,8 +135,14 @@
             token: localStorage.getItem("access_token"),
             login: function(username,password){
                 return axios.request({
-                    url: LOGINURL, method: 'post',
+                    url: "/", method: 'post', params: { action: "login" },
                     data: { username: username, password: password, },
+                })
+            },
+            register: function(username,password,confirm){
+                return axios.request({
+                    url: "/", method: 'post', params: { action: "register" },
+                    data: { username: username, password: password, confirm: confirm },
                 })
             },
             get: function(page){
@@ -163,6 +188,7 @@
                     editData: { show: false, tiid: "", ti: "", },
                     addData: { show: false, type: "single", ti: "", isDelSame: true, },
                     loginData: { show: false, username: "", password: "" },
+                    registerData: { show: false, username: "", password: "", confirm: "" },
                 }
             },
             mounted: function () {
@@ -200,6 +226,21 @@
                             this.$messageBox.alert(e.data.msg, '登录成功', {type: 'success'})
 
                             this.getTi()
+                        })
+                },
+                register: function(){
+                    API.register(this.registerData.username, this.registerData.password, this.registerData.confirm)
+                        .then(e=>{
+                            if (e.data.code!=200){
+                                this.$messageBox.alert(e.data.error, '注册错误', {type: 'error'})
+                                return;
+                            }
+                            this.$messageBox.alert(e.data.msg, '注册成功', {type: 'success'})
+                            
+                            this.registerData.show = false;
+
+                            this.setnologin()
+                            that.$message.info('请登录');
                         })
                 },
                 setnologin: function(){
