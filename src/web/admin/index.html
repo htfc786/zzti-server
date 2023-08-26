@@ -38,6 +38,7 @@
                     <el-table-column type="selection" width="40"></el-table-column>
                     <el-table-column prop="index" label="#" width="60"></el-table-column>
                     <el-table-column prop="ti" label="题目"></el-table-column>
+                    <el-table-column prop="group" label="分组"></el-table-column>
                     <el-table-column fixed="right" label="操作" width="140">
                         <template #default="scope">
                             <el-button @click="editTi_open(scope.row.id,scope.row.ti)" size="small">编辑</el-button>
@@ -74,6 +75,23 @@
                 </el-form-item>
                 <el-form-item label="使用去重" prop="deltisivery">
                     <el-switch v-model="addData.isDelSame"></el-switch>
+                </el-form-item>
+                <el-form-item label="分组" prop="deltisivery">
+                    <el-select
+                        v-model="addData.group"
+                        filterable
+                        allow-create
+                        default-first-option
+                        @click="getGroupQueryAsync()"
+                        placeholder="请选择一个分组或输入一个分类"
+                    >
+                        <el-option
+                            v-for="group in groupList"
+                            :key="group"
+                            :label="group"
+                            :value="group"
+                        ></el-option>
+                    </el-select>
                 </el-form-item>
                 <el-form-item label="题目" v-if="addData.type!='file'">
                     <el-alert v-if="addData.type=='multiple'" show-icon :closable="false" style="height:30px">
@@ -163,16 +181,22 @@
                     data:{ access_token: this.token, id: tiid, ti: ti, },
                 })
             },
-            add: function(ti,isDelSame_text){
+            add: function(ti,groupName,isDelSame_text){
                 return axios.request({
                     url: "/",  method: 'post', params: { action: "admin.add" },
-                    data:{ access_token: this.token, isDelSame: isDelSame_text, ti: ti, },
+                    data:{ access_token: this.token, isDelSame: isDelSame_text, groupName: groupName, ti: ti, },
                 })
             },
             add_file: function(fd){
                 return axios.request({
                     url: "/",  method: 'post', params: { action: "admin.add_file" },
                     data: fd,
+                })
+            },
+            getgroup: function(){
+                return axios.request({
+                    url: "/",  method: 'post', params: { action: "admin.getgroup" },
+                    data: { access_token: this.token, },
                 })
             },
         }
@@ -185,8 +209,10 @@
                     pageNum: 1,
                     pageNow: 1,
                     checkIdList: [],
+                    groupList: [],  //分组列表
+                    _isGetGroup: false, //是否获取过组
                     editData: { show: false, tiid: "", ti: "", },
-                    addData: { show: false, type: "single", ti: "", isDelSame: true, },
+                    addData: { show: false, type: "single", ti: "", isDelSame: true, group: "" },
                     loginData: { show: false, username: "", password: "" },
                     registerData: { show: false, username: "", password: "", confirm: "" },
                 }
@@ -363,7 +389,7 @@
                     }
 
                     const that = this;
-                    API.add(data, this.addData.isDelSame)
+                    API.add(data, this.addData.group, this.addData.isDelSame)
                         .then((e)=>{
                             if (e.data.code==401){ that.setnologin(); return; }
                             if (e.data.code != 200){
@@ -373,6 +399,14 @@
                             that.$message.success(e.data.msg);
                             that.getTi()
                         })
+                    
+                    //如果新建了组 原来的groupList数组没有内容
+                    if(this.groupList.indexOf(this.addData.group) == -1){
+                        //先多等一会，带后端添加完成
+                        setTimeout(()=>{
+                            that.getGroup()
+                        },100)
+                    }
                 }, 
                 addTi_file: function(){
                     const uploadFiles = this.$refs['tiFileUpload'];
@@ -402,7 +436,29 @@
                             uploadFiles.value = '';//清空选择的文件
                             that.getTi()
                         })
-                },         
+                },
+                getGroup: function(){
+                    const that = this
+                    API.getgroup()
+                        .then(e=>{
+                            if (e.data.code==401){ that.setnologin(); return; }
+
+                            that.groupList = e.data.data;
+                        })
+                },
+                getGroupQueryAsync: function(queryString, cb){
+                    console.log(queryString, this.groupList)
+                    if (!this._isGetGroup){
+                        const that = this
+                        API.getgroup()
+                            .then(e=>{
+                                if (e.data.code==401){ that.setnologin(); return; }
+                                that.groupList = e.data.data;
+                                that._isGetGroup = true;
+                            })
+                        return;
+                    }
+                }
             },
         }).use(ElementPlus).mount('#app')
     </script>
